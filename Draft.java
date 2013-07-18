@@ -12,10 +12,10 @@ import java.util.Scanner;
 class Draft {
 	private int playersNum;
 	private int roundsNum;
-	private Player[] stats;
+	private Player[] players;
 	private Game[] games;
 	private Player bye;
-	final static String INPUT_FILE_NAME = "in.txt";
+	private final static String INPUT_FILE_NAME = "in.txt";
 	
 	public static void main(String[] args) throws Exception {
 		Draft draft = new Draft();
@@ -38,41 +38,23 @@ class Draft {
 	}
 	
 	public void init() {
-		bye = new Player("Bye");
-		/*stats = new Player[5];
-		stats[0] = new Player("one", 5, 3, 0, 2);
-		stats[1] = new Player("two", 4, 3, 0, 2);
-		stats[2] = new Player("three", 8, 3, 0, 2);
-		stats[3] = new Player("four", 5, 1, 0, 2);
-		stats[4] = new Player("five", 5, 3, 7, 2);*/
-		
-	}
-	
-	private void log(String s) {
-		System.out.println(s);
+		bye = new Player("Bye");		
 	}
 	
 	public void readInput(String in) throws Exception {
 		Scanner sc = new Scanner(new File(in), "UTF-8");
 		
-		/*if (!sc.hasNext()) {
-			return;
-		}*/
 		playersNum = sc.nextInt();
-		stats = new Player[playersNum];
-		/*if (!sc.hasNext()) {
-			return;
-		}*/
+		players = new Player[playersNum];
+		
 		roundsNum = sc.nextInt();
 		int gamesPerRound = (playersNum + 1) / 2;
+		
 		games = new Game[roundsNum * gamesPerRound];
 		for (int i = 0; i < playersNum && sc.hasNext(); i++) {
-			stats[i] = new Player(sc.next());
+			players[i] = new Player(sc.next());
 		}
-		/*if (i != playersNum) {
-			return;
-		}*/
-		
+				
 		String s1, s2, s3;
 		for (int i = 0; i < roundsNum; i++) {
 			for (int j = 0; j < gamesPerRound; j++) {
@@ -82,7 +64,19 @@ class Draft {
 					games[i * gamesPerRound + j] = new Game(i + 1, getPlayerByName(s1), bye, "2:0");
 				} else {
 					s3 = sc.next();
-					games[i * gamesPerRound + j] = new Game(i + 1, getPlayerByName(s1), getPlayerByName(s3), s2);
+					if (!s2.matches("[01]:[012]|[012]:[01]")) {
+						throw new Exception("invalid game result: " + s2);
+					}
+					Player p1 = getPlayerByName(s1);
+					Player p2 = getPlayerByName(s3);
+					for (int k = j - 1; k >= 0; k--) {
+						Game g = games[i * gamesPerRound + k];
+						if (g.player1 == p1 || g.player1 == p2 ||
+						    g.player2 == p1 || g.player2 == p2) {
+							throw new Exception("second game per round: " + s1 + " " + s2 + " " + s3);
+						}
+					}
+					games[i * gamesPerRound + j] = new Game(i + 1, p1, p2, s2);
 				}
 			}
 		}
@@ -97,10 +91,10 @@ class Draft {
 		int win, loss, draw;
 		// перевроверить. пока что гарантированно корректно обрабатываются только 2:0 2:1 0:2 1:2 1:1 0:0
 		for (int i = 0; i < games.length; i++) {
-			//log("game" + i);
+			//System.out.println("game " + i);
 			win = games[i].result.charAt(0) - 48;
 			loss = games[i].result.charAt(2) - 48;
-			if (games[i].result.length() == 5) {
+			if (games[i].result.length() == 5) { // 1:1:1??
 				draw = games[i].result.charAt(4) - 48;
 			} else {
 				draw = 0;
@@ -109,19 +103,19 @@ class Draft {
 				games[i].player1.opponentsList.add(games[i].player2);
 				games[i].player2.opponentsList.add(games[i].player1);
 			}
-			if (games[i].player2 != bye) {
-				//log("player2 != bye");
-				games[i].player2.matchesPlayed++;
-				games[i].player2.gamePoints += loss * 3 + draw * 1;
-				games[i].player2.gamesPlayed += win + loss + draw;
-			}
 			if (games[i].player1 != bye) {
-				//log("player1 != bye");
+				//System.out.println("player1 != bye");
 				games[i].player1.matchesPlayed++;
 				games[i].player1.gamePoints += win * 3 + draw * 1;
 				games[i].player1.gamesPlayed += win + loss + draw;
 			}
-			// bye cant win or draw so no check required
+			if (games[i].player2 != bye) {
+				//System.out.println("player2 != bye");
+				games[i].player2.matchesPlayed++;
+				games[i].player2.gamePoints += loss * 3 + draw * 1;
+				games[i].player2.gamesPlayed += win + loss + draw;
+			}
+			
 			if (win > loss) {
 				games[i].player1.matchPoints += 3;
 			} else if (loss > win) {
@@ -131,39 +125,38 @@ class Draft {
 				games[i].player2.matchPoints += 1;
 			}
 		}
-		for (int i = 0; i < stats.length; i++) {
-			stats[i].calculateStats();
+		for (int i = 0; i < players.length; i++) {
+			players[i].calculateStats();
 		}
-		for (int i = 0; i < stats.length; i++) {
-			stats[i].calculateOppStats();
+		for (int i = 0; i < players.length; i++) {
+			players[i].calculateOppStats();
 		}
-		Arrays.sort(stats);
+		Arrays.sort(players);
 	}
 	
 	public void print(boolean fullStats) {
 		System.out.println("Draft results:");
 		if (fullStats) {
-			// print full details
-			for (int i = 0; i < stats.length; i++) {
-				stats[i].printFullStats();
+			for (int i = 0; i < players.length; i++) {
+				players[i].printFullStats();
 			}
 		} else {
-			for (int i = 0; i < stats.length; i++) {
-				System.out.println(stats[i]);
+			for (int i = 0; i < players.length; i++) {
+				System.out.println(players[i]);
 			}
 		}
 	}
 		
-	private Player getPlayerByName(String name) {
+	private Player getPlayerByName(String name) throws Exception {
 		for (int i = 0; i < playersNum; i++) {
-			if (stats[i].name.equals(name)) {
-				return stats[i];
+			if (players[i].name.equals(name)) {
+				return players[i];
 			}
 		}
 		if (name.equals("Bye")) {
 			return bye;
 		}
-		return null;
+		throw (new Exception("can't find player: " + name));
 	}
 	
 	class Player implements Comparable<Player> {
@@ -178,44 +171,21 @@ class Draft {
 		public int gamePoints = 0;
 		public ArrayList<Player> opponentsList = new ArrayList<Player>();
 		
-		public Player(String name, double mwp, double omwp, double gwp, double  ogwp) {
-			this.name = name;
-			this.mwp = mwp;
-			this.omwp = omwp;
-			this.gwp = gwp;
-			this.ogwp = ogwp;
-		}
-		
 		public Player(String name) {
 			this.name = name;
-			/*this.mwp = 0;
-			this.omwp = 0;
-			this.gwp = 0;
-			this.ogwp = 0;
-			this.matchesPlayed = 0;
-			this.matchPoints = 0;
-			this.gamesPlayed = 0;
-			this.gamePoints = 0;
-			this.opponentsList = null;*/
 		}
 		
 		public void calculateStats() {
 			mwp = (double) matchPoints / (3 * matchesPlayed);
-			if (mwp < 0.333) {
-				mwp = 0.333;
-			}
 			gwp = (double) gamePoints / (3 * gamesPlayed);
-			if (gwp < 0.333) {
-				gwp = 0.333;
-			}
 		}
 		
 		public void calculateOppStats() {
 			double omwperc = 0;
 			double ogwperc = 0;
 			for (Player opp : opponentsList) {
-				omwperc += opp.mwp;
-				ogwperc += opp.gwp;
+				omwperc += opp.mwp > 0.333 ? opp.mwp : 0.333;
+				ogwperc += opp.gwp > 0.333 ? opp.gwp : 0.333;
 			}
 			omwp = omwperc / opponentsList.size();
 			ogwp = ogwperc / opponentsList.size();
