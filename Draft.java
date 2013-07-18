@@ -1,12 +1,12 @@
-/**
+/*
  * known bugs: cant handle leavers
- *			check mtg tie breaks
- *			
+ *
  */
 
 import java.util.Arrays;
 import java.io.File;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Scanner;
 
 
 class Draft {
@@ -19,10 +19,22 @@ class Draft {
 	
 	public static void main(String[] args) throws Exception {
 		Draft draft = new Draft();
+
+		boolean fullStats = false;
+		if (args.length > 0 && args[args.length - 1].equals("-d")) {
+			fullStats = true;
+		}
+		String in;
+		if (args.length > 0 && !args[0].equals("-d")) {
+			in = args[0];
+		} else { 
+			in = INPUT_FILE_NAME;
+		}
+		
 		draft.init();
-		draft.readInput(args);
+		draft.readInput(in);
 		draft.process();
-		draft.print(args);
+		draft.print(fullStats);
 	}
 	
 	public void init() {
@@ -40,14 +52,8 @@ class Draft {
 		System.out.println(s);
 	}
 	
-	public void readInput(String[] args) throws Exception {
-		String input;
-		if (args.length == 0) {
-			input = INPUT_FILE_NAME;
-		} else {
-			input = args[0];
-		}
-		Scanner sc = new Scanner(new File(input), "UTF-8");
+	public void readInput(String in) throws Exception {
+		Scanner sc = new Scanner(new File(in), "UTF-8");
 		
 		/*if (!sc.hasNext()) {
 			return;
@@ -89,7 +95,7 @@ class Draft {
 	
 	public void process() {
 		int win, loss, draw;
-		// тут надо перечитать правила и пересмотреть код. пока что гарантированно корректно обрабатываются только 2:0 2:1 0:2 1:2 1:1 0:0
+		// перевроверить. пока что гарантированно корректно обрабатываются только 2:0 2:1 0:2 1:2 1:1 0:0
 		for (int i = 0; i < games.length; i++) {
 			//log("game" + i);
 			win = games[i].result.charAt(0) - 48;
@@ -134,9 +140,10 @@ class Draft {
 		Arrays.sort(stats);
 	}
 	
-	public void print(String[] args) {
+	public void print(boolean fullStats) {
 		System.out.println("Draft results:");
-		if (args.length > 0 && args[0].equals("-d")) {
+		if (fullStats) {
+			// print full details
 			for (int i = 0; i < stats.length; i++) {
 				stats[i].printFullStats();
 			}
@@ -215,13 +222,13 @@ class Draft {
 		}
 		
 		public void printFullStats() {
-			System.out.println("----------------------------------------------------------");
+			System.out.println("-------------------------------------------");
 			System.out.println(String.format("%s\t%d\t%d\t%d\t%d", name, matchPoints, matchesPlayed, gamePoints, gamesPlayed));
 			System.out.println(String.format("\t%.3f\t%.3f\t%.3f\t%.3f", mwp, omwp, gwp, ogwp));
 			for (Player opp : opponentsList) {
 				System.out.print("\t" + opp.name);
 			}
-			System.out.println("\n----------------------------------------------------------");
+			System.out.println("\n-------------------------------------------");
 		}
 		
 		@Override
